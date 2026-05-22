@@ -6,7 +6,7 @@ This guide documents the setup path for Ultralyzer.
 
 - Python 3.12 or newer
 - Windows, macOS, or Linux
-- A virtual environment, such as [Miniconda](https://www.anaconda.com/download/success?reg=skipped), is strongly recommended
+- A virtual environment manager, such as [Miniconda](https://www.anaconda.com/download/success?reg=skipped), is strongly recommended
 - MATLAB available for geometry-dependent distance and area measurements
 
 Ultralyzer can still open without complete geometry support. When that happens, segmentation, review, editing, and export workflows remain available, but some geometry-dependent metrics may be skipped.
@@ -22,6 +22,8 @@ Ultralyzer can still open without complete geometry support. When that happens, 
 ::::{tab-set}
 
 :::{tab-item} Windows
+
+Start by opening `Anaconda Prompt`. Then run the following commands:
 
 1. Clone the repository.
 
@@ -58,6 +60,8 @@ Ultralyzer can still open without complete geometry support. When that happens, 
 :::
 
 :::{tab-item} macOS and Linux
+
+Start by opening a terminal and run the following commands:
 
 1. Clone the repository.
 
