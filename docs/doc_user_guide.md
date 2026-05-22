@@ -1,141 +1,243 @@
-# User Guide
+# Workflow Guide
 
-## Getting Started
+This guide follows the typical Ultralyzer workflow from a new image folder to exported results. It assumes the MATLAB backend path described in [Installation and Setup](./doc_installation.md).
 
-Ultralyzer is designed to work with retinal UltraWidefield (UWF) images for segmentation and analysis. This guide will walk you through the basic workflow. In a nutshell, you will:
+## Workflow overview
 
-1. Load your image dataset and possibly existing masks.
-2. Quality control (QC) the images `{PASS, BORDERLINE, REJECT}`.
-3. Run automated segmentation. Only images marked as `PASS` or `BORDERLINE` will be processed.
-4. Edit segmentation masks if necessary (most likely).
-   - Arteries and veins should be uninterrupted vessel paths. Pay special attention to crossings.
-   - The optic disc should be a complete blob (no holes).
-   - The fovea should be correctly located at the center of the foveal avascular zone.
-   - **Save your edits frequently!**
-5. Compute metrics based on the final segmentation masks.
-6. Export a results workbook containing metrics and QC data.
+1. Load images and any existing masks.
+2. Review image quality and save QC decisions.
+3. Run segmentation for the current image or pending images.
+4. Inspect image channels, overlays, and ROI display.
+5. Edit masks and place the fovea if required.
+6. Calculate metrics.
+7. Export a workbook or PSD files.
 
-⚠️ **Notes** ⚠️
+:::{tip}
+Use the current GUI labels as your guide. If a step mentions **Segment current image** or **Calculate current metrics**, those are the exact buttons shown in the workflow sidebar.
+:::
 
-- Masks follow the same naming as the images, except for the extension which will always be `.png` for the masks. For example, if your image is `img_001.tif`, the corresponding mask will also be `img_001.png`.
-- Arteries, veins and optic disc are painted in the masks using specific colors (RGB):
-  - Arteries **`(255, 0, 0)`** &rarr; red
-  - Veins **`(0, 0, 255)`** &rarr; blue
-  - Optic Disc **`(0, 255, 0)`** &rarr; green
-- An artery & vein crossing should appear as a continuous red and blue path, with no interruptions. Hence, its color at the crossing point will be magenta `(255, 0, 255)`.
-- An artery inside the optic disc should appear as yellow `(255, 255, 0)`.
-- A vein inside the optic disc should appear as cyan `(0, 255, 255)`.
-- A crossing of an artery and a vein inside the optic disc should appear as white `(255, 255, 255)`.
-- If masks have been generated using an external tool, images and masks **must** be in two different folders.
+## 1. Load data
 
-## 1. Loading Data
+### Load images
 
-1. **Images**: Go to `File > Open Image Folder...`. Select the directory containing your retinal images (supported formats: PNG, JPG, TIFF, BMP).
-2. **Existing Masks**: If you have pre-computed masks, go to `File > Load Segmentation Folder...`. The app will match masks to images by filename.
-3. **PSD Segmentations**: Go to `File > Import > PSD Segmentations...`. Select one or more `.psd` files.
-   - The application extracts both the image and the mask layers (Arteries, Veins, Optic Disc).
-   - If the image is not in the database, it will be added with a QC status of `BORDERLINE` and a note "Imported from PSD, needs review".
-   - These images will be saved as `.tif` files in the current image folder or on the default image directory `src/.img`.
-   - The masks will be saved as `.png` files in the segmentation folder.
-4. **DICOM Images**: Go to `File > Import > DICOM Images...`. Select one or more `.dcm` or `.dicom` files.
-   - The application extracts the image from the DICOM file.
-   - Images are saved as `.tif` files in the current image folder with the naming convention `PatientID_Laterality_Timestamp.tif`.
+Use **File > Open Image Folder...** to load the main image directory.
 
----
+- The folder label in the top navigation row updates immediately.
+- The searchable image dropdown is populated with the available files.
+- The image filter can then be used to narrow the visible list.
 
-## 2. Quality Control
+### Load existing segmentations
 
-Classify images to filter them for analysis:
+If you already have masks, use **File > Load Segmentation Folder...**.
 
-1. Asses image quality visually based on the following criteria:
-   - **Field of View**: Is the retina fully visible?
-   - **Illumination**: Is the image well-lit without excessive shadows or glare?
-   - **Focus**: Is the image sharp without blurriness?
-   - **Artifacts**: Are there any obstructions (e.g., eyelids, eyelashes) or distortions?
-   - **Pathology**: Are there any abnormalities that could affect analysis?
-2. Add optional **Notes** in the text box.
-3. Click a decision button:
-    - **✅ PASS**: Good quality, ready for metrics.
-    - **⚠️ BORDERLINE**: Usable but has minor issues.
-    - **❌ REJECT**: Poor quality and unusable.
-4. As soon as you make a decision, the border around the image canvas will change color to reflect your choice.
+- Masks are matched to images by filename.
+- Images and masks should live in different folders when masks were generated externally.
+- Masks are expected as `.png` files even when the source images use other image formats.
 
-💡 **Tip** 💡
+### Import PSD or DICOM data
 
-If you want to bulk assign a QC decision to all images in your folder, go to `Image > Assign QC to All` and select the desired option.
+Use the **File > Import** submenu when you need to ingest external material:
+
+- **PSD Segmentations...** imports layered PSD masks.
+- **DICOM Images...** converts supported DICOM files into the project.
+
+## 2. Review image quality
+
+Review the currently displayed image before running batch actions.
+
+1. Inspect focus, illumination, field of view, artifacts, and any pathology that affects analysis quality.
+2. Add notes in the **Notes** field when you need image-specific context.
+3. Choose one QC decision in the **Review** card:
+   - **Pass**
+   - **Borderline**
+   - **Reject**
+
+Batch processing is intended for the usable images, so this step matters.
+
+:::{tip}
+To apply one QC decision to the full filtered set, use **Image > Assign QC to All**.
+:::
 
 ![Assign QC All](./_static/images/qc_bulk_assign.png)
 
----
+## 3. Run segmentation
 
-## 3. Automated Segmentation
+Ultralyzer supports both current-image and pending-image segmentation flows.
 
-### Automated Segmentation
+### Current image
 
-You can run the AI models directly within the app:
+Use either of these entry points:
 
-- **Single Image**: Click `⏩ Segment Current` in the bottom panel.
-- **Batch Processing**: Click `⏩ Segment All` to process every image in the loaded folder with a QC status `{PASS, BORDERLINE}`.
-- **Specific Models**: Use `Analyze > Advanced Segmentation` to run specific tasks like `A/V Segment` or `Disc Segment`.
+- **Segment current image** in the **Current image** card
+- **Analyze > Current Image > Segment** in the menu bar
 
-### Visualization Controls
+### Pending images
 
-- **Opacity**: Use the vertical slider on the bottom-left to adjust the transparency of the segmentation overlay (`Ctrl + Scroll`).
-- **Channels**: Toggle specific image/overlay views using the dropdown or [shortcuts](./doc_appendix.md#keyboard-shortcuts#view--overlay-controls).
+For batch work, use **Analyze > Pending Images > Segment Pending Images**
 
----
+:::{warning}
+You may need to reset your segmentation mask after having saved edits and moved to a different image. In that case, you can re-run Artery/Vein and Optic Disc segmentation independently from **Analyze > Segmentation**.
+:::
 
-## 4. Editing & Correction
+## 4. Inspect the display before editing
 
-If the automated segmentation needs correction, enter **Edit Mode** by clicking `✏️ Edit Mask`.
+The left sidebar controls how the current image is visualized.
 
-### Tools
+### Image and overlay views
 
-- **🖌️ Brush (`Ctrl+B`)**: Add to the mask.
-- **✨ Smart Paint (`Ctrl+Shift+B`)**: Semi-automated painting that sticks to vessel edges.
-- **🧹 Eraser (`Ctrl+E`)**: Remove parts of the mask.
-- **⇄ Color Switch (`Ctrl+C`)**: Click on a vessel segment to swap it between Artery (Red) and Vein (Blue).
-- **🎯 Fovea Location**: Click to manually set the fovea center point.
+Use the dropdowns to inspect:
 
-### Brush Controls
+- image view: `Color image`, `Red channel`, `Green channel`, `Blue channel`
+- mask view: `Arteries`, `Optic disc`, `Veins`, `All vessels`, `All masks`, `No mask`
 
-- **Size**: Adjust using the slider or **`+` / `-` keys** (or `Shift + Scroll`).
+The number keys documented in [Keyboard shortcuts](./doc_appendix.md#keyboard-shortcuts) are useful when you want to switch overlays quickly.
 
-### Saving Edits
+### Metric ROI
 
-- **Save (`Ctrl+S`)**: Saves the current mask to the disk.
-- **Undo/Redo (`Ctrl+Z` / `Ctrl+Shift+Z`)**: Revert or reapply recent changes.
+Use **Metric ROI** to decide which ROI definitions are active for display and ROI-dependent metric calculation.
 
----
+The current default ROI definitions are:
 
-## 4. Metric Calculation
+- `Full image`
+- `Central retina`
+- `Mid-periphery`
 
-Once the segmentation masks are finalized and **saved** (either automatically generated or manually corrected), you can calculate retinal vascular metrics.
+When **Show ROI edges** is enabled, the selected ROI combination is drawn on the canvas.
 
-### Calculation Controls
+### Canvas overlays
 
-- **Single Image**: Click `📊 Metrics` in the bottom panel to calculate metrics for the currently displayed image.
-- **Batch Processing**: Click `📊 Metrics All` to calculate metrics for all images in the loaded folder that have a QC status of `{PASS, BORDERLINE}` and a valid segmentation mask.
+Use these toggles when reviewing a result:
 
-### What is Calculated?
+- **Show ROI edges**
+- **Show fovea**
 
-The software computes a comprehensive set of metrics including:
+The status bar utilities are also useful here. You can find them in the bottom-right corner of the window::
 
-- **Vessel Geometry**: Width, tortuosity, fractal dimension.
-- **Optic Disc**: Area, diameter, shape.
-- **Fovea**: Location relative to the optic disc.
-- **Artery/Vein Specifics**: Caliber, density, and A/V ratio.
+- **Refresh** to reload the image and mask
+- **Zoom** for `{fit, actual size, and centering}` controls
+- **Opacity** for segmentation mask transparency
 
-For a full list of calculated metrics and their definitions, please refer to the [Metric Definitions](./doc_appendix.md#metric-definitions).
+![Status bar utilities](./_static/images/status_bar_utilities.png)
 
----
+## 5. Edit masks when needed
 
-## 5. Exporting Results
+If the segmentation needs correction, click **Edit mask** to enter edit mode.
 
-Go to `File > Export`:
+### Editing goals
 
-- **Results Workbook...**: Generates an Excel workbook with a minimal QC sheet, an image-level landmark metrics sheet, and one metrics sheet per ROI.
-- **PSD Segmentations**: Exports images and segmentations as layered Photoshop (PSD) files. The PSD file will contain separate layers for `Arteries`, `Veins` and `Optic Disc` segmentation masks as well as the original `Color Image` and its `Green Channel` (for better vessel visibility and discrimation).
+During editing, focus on the structures that directly affect metrics:
 
-   - **Current Image...**: Exports only the currently displayed image and its segmentation mask.
-   - **All Images...**: Exports all loaded images with corresponding segmentations.
+- keep arteries and veins as continuous vessel paths
+- correct artery-vein crossings when the classification is wrong
+- keep the optic disc mask complete
+- set the fovea location when it is missing or incorrect
+
+### Editing tools
+
+The **Tools** card provides:
+
+- **Brush**: paints directly into the overlay channel you are currently editing. In practice, this means the selected mask view matters. If the overlay is set to `Arteries`, the stroke paints only artery pixels. If it is set to `Optic disc`, it paints only the disc layer. If it is set to `All vessels` or `All masks`, the stroke affects every visible mask channel in that view. If the overlay is set to `No mask`, the stroke is ignored.
+- **Smart paint**: follows the stroke path like the brush, but only repaints pixels that already belong to a vessel. It is intended for artery-vein correction, not for drawing new vessel regions from empty background. It only applies when the overlay is set to `Arteries` or `Veins`.
+- **Eraser**: removes pixels from the currently active overlay channels. As with the brush, the current mask view determines what is erased. If you erase while viewing `Arteries`, only the artery mask is affected. If you erase while viewing `All masks`, the stroke removes every visible mask channel under that path.
+- **Swap**: works with a single click rather than a freehand stroke. Click a vessel region to flood-fill the connected component and switch its artery-vein classification. This is most useful when a continuous vessel segment has been assigned to the wrong vascular class.
+- **Fovea location**: click once on the canvas to save the fovea location for the current image. After placing or correcting the fovea, re-run metric calculation so disc-fovea measurements update.
+- **Brush size** slider: changes the radius used by **Brush**, **Smart paint**, and **Eraser**. Use a smaller radius for crossings and fine branches, and a larger radius for broad edits.
+
+:::{tip}
+When you are editing, first switch the **Mask overlay** dropdown to the specific structure you want to change. That keeps the brush and eraser constrained to the intended layer instead of affecting multiple channels at once.
+:::
+
+Use the keyboard shortcuts in [Keyboard shortcuts](./doc_appendix.md#keyboard-shortcuts) to move faster while editing.
+
+### Save and exit
+
+- Use **Save Edits** from the Edit menu or `Ctrl+S`.
+- Use **Undo** and **Redo** for correction loops.
+- Use **Exit edit mode** when you want to return to the review workflow.
+
+## 6. Calculate metrics
+
+Once the mask and fovea are in a good state, calculate metrics.
+
+### Current image metrics
+
+Run metrics from:
+
+- **Calculate current metrics** in the workflow sidebar
+- **Analyze > Current Image > Calculate Metrics** in the menu bar
+
+### Pending image metrics
+
+Use **Analyze > Pending Images > Calculate Pending Metrics** when you want to batch-process the images that Ultralyzer currently treats as pending for metrics.
+
+For this action, an image is considered `pending` when its QC decision is **Pass** or **Borderline**.
+
+- The batch pass recalculates the image-level landmark metrics for those images.
+- ROI metrics that already exist for the selected ROI definitions are skipped rather than recomputed.
+- If an image still has no saved segmentation, metric calculation for that image will fail, so run segmentation first when needed.
+
+This is different from the **No metrics** image filter, which only shows images that do not yet have saved image-level landmark metrics.
+
+### Geometry readiness matters
+
+Before you calculate metrics, check the geometry readiness dot in the **Current image** card.
+
+- `Green` means geometry-dependent metrics should be available.
+- `Yellow` means only part of the geometry workflow is available.
+- `Red` means geometry-dependent metrics will be skipped.
+
+This affects measurements such as geodesic distances and area-based metrics. The application stays usable even when those metrics cannot be produced.
+
+:::{note}
+If the fovea is missing, Ultralyzer logs a warning and asks you to identify it with the edit-mask workflow before rerunning metrics.
+:::
+
+For the current metric families and metric key patterns, see [Metric definitions](./doc_appendix.md#metric-definitions).
+
+## 7. Export results
+
+Use **File > Export** once the dataset is reviewed and processed.
+
+### Results Workbook
+
+This exports the workbook containing QC information, image-level landmark metrics, and ROI-specific metric sheets.
+
+### PSD Segmentations
+
+`PSD` stands for `Photoshop Document`, a layered image format. In this workflow it is useful because Ultralyzer can store the artery, vein, and optic-disc masks as separate editable layers instead of flattening everything into one image.
+
+That makes PSD export a practical handoff format when you want to:
+
+- review the segmentation in external image-editing software
+- correct one structure without destroying the others
+- keep the original color image and green channel available as aligned reference layers
+- import the layered result back through **File > Import > PSD Segmentations...**
+
+:::{tip}
+If the user has access to a Tablet/iPad/PC with a stylus, exporting to PSD and editing in [Sketchbook](https://www.sketchbook.com/), or a similar app, can be a more intuitive way to make complex edits than using the brush and eraser tools in Ultralyzer.
+:::
+
+This exports layered PSD files containing:
+
+- the original color image
+- the green image channel
+- artery, vein, and optic-disc segmentation layers
+
+You can export either:
+
+- **Current Image**
+- **All Images**
+
+## 8. Recommended daily workflow
+
+For routine use, this sequence tends to work best:
+
+1. Load a folder.
+2. Filter to unreviewed images.
+3. Save QC decisions.
+4. Segment the current image or run pending segmentation.
+5. Inspect overlays and ROI settings.
+6. Edit masks where needed.
+7. Check geometry readiness.
+8. Calculate metrics.
+9. Export the workbook.

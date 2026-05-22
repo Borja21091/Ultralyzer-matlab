@@ -266,7 +266,7 @@ class MainWindow(QMainWindow):
 
         export_menu = file_menu.addMenu("Export")
 
-        action_export_metrics = QAction("Results Workbook...", self)
+        action_export_metrics = QAction("Results Workbook", self)
         action_export_metrics.triggered.connect(self._on_export_metrics)
         export_menu.addAction(action_export_metrics)
 
@@ -274,11 +274,11 @@ class MainWindow(QMainWindow):
 
         export_psd_menu = export_menu.addMenu("PSD Segmentations")
 
-        action_export_psd_current = QAction("Current Image...", self)
+        action_export_psd_current = QAction("Current Image", self)
         action_export_psd_current.triggered.connect(self._on_export_to_psd_current)
         export_psd_menu.addAction(action_export_psd_current)
 
-        action_export_psd_all = QAction("All Images...", self)
+        action_export_psd_all = QAction("All Images", self)
         action_export_psd_all.triggered.connect(self._on_export_to_psd_all)
         export_psd_menu.addAction(action_export_psd_all)
 
@@ -376,15 +376,15 @@ class MainWindow(QMainWindow):
 
         analyze_menu.addSeparator()
 
-        advanced_segmentation_menu = analyze_menu.addMenu("Advanced Segmentation")
+        segmentation_menu = analyze_menu.addMenu("Segmentation")
 
         action_av_segment = QAction("A/V Segment", self)
         action_av_segment.triggered.connect(self._on_av_segment)
-        advanced_segmentation_menu.addAction(action_av_segment)
+        segmentation_menu.addAction(action_av_segment)
         
         action_disc_segment = QAction("Disc Segment", self)
         action_disc_segment.triggered.connect(self._on_disc_segment)
-        advanced_segmentation_menu.addAction(action_disc_segment)
+        segmentation_menu.addAction(action_disc_segment)
         
         
         # Help menu

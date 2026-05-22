@@ -1,158 +1,124 @@
+(keyboard-shortcuts)=
 # Appendix
 
-## Keyboard Shortcuts
+This appendix keeps reference material separate from the main workflow pages.
 
-The following keyboard shortcuts are available to enhance your workflow within the application.
+## Keyboard shortcuts
 
-### View & Overlay Controls
+The list below reflects the current shortcut registrations in the GUI.
 
-| **View / Overlays** | **Shortcut** |
+### View and overlay controls
+
+| Action | Shortcut |
 | :--- | :--- |
-| Show Red Overlay | `1` |
-| Show Green Overlay | `2` |
-| Show Blue Overlay | `3` |
-| Show Vessels Only | `4` |
-| Show All | `5` |
-| Hide Overlay | `6` |
-| Opacity Up/Down | `Ctrl + Scroll` |
+| Show artery overlay | `1` |
+| Show optic-disc overlay | `2` |
+| Show vein overlay | `3` |
+| Show all vessels | `4` |
+| Show all masks | `5` |
+| Hide mask overlay | `6` |
+| Change mask opacity | `Ctrl + Scroll` |
+| Fit the current view | Double-click in the canvas |
 
-| **Image Channels** | **Shortcut** |
+### Editing tools
+
+| Action | Shortcut |
 | :--- | :--- |
-| Color Image | `C` |
-| Red Channel | `R` |
-| Green Channel | `G` |
-| Blue Channel | `B` |
-
-### Editing Tools
-
-| **Tools** | **Shortcut** |
-| :--- | :--- |
-| Brush Tool | `Ctrl + B` |
-| Smart Paint | `Ctrl + Shift + B` |
-| Eraser | `Ctrl + E` |
-| Color Switch | `Ctrl + C` |
-| Save Edits | `Ctrl + S` |
+| Brush | `B` |
+| Smart paint | `Shift + B` |
+| Eraser | `E` |
+| Swap artery/vein classification | `C` |
+| Fovea location tool | `F` |
+| Increase brush size | `=` |
+| Decrease brush size | `-` |
+| Change brush size | `Shift + Scroll` |
+| Save edits | `Ctrl + S` |
 | Undo | `Ctrl + Z` |
 | Redo | `Ctrl + Shift + Z` |
-| Brush Size Up | `+` or `=` |
-| Brush Size Down | `-` |
-| Brush Size Up/Down | `Shift + Scroll` |
+| Temporary pan while editing | Hold `Space` |
 
 ### Navigation
 
-| **Navigation** | **Shortcut** |
+| Action | Shortcut |
 | :--- | :--- |
-| Next Image | `Right Arrow` |
-| Previous Image | `Left Arrow` |
+| Previous image | `Left Arrow` |
+| Next image | `Right Arrow` |
 
-## Metric Definitions
+(metric-definitions)=
+## Metric definitions
 
-This section details all the metrics calculated by Ultralyzer, organized by category.
+The tables below describe the current metric families documented by the active calculators. Metric availability depends on the presence of the required landmarks, ROI selection, and geometry support.
 
-Pixel coordinates start at the top-left corner of the image (0,0). X increases to the right, and Y increases downwards. Therefore, a coordinate `(x, y)` refers to a point `x` pixels to the right and `y` pixels down from the top-left corner.
+:::{note}
+Geometry-dependent metrics such as `disc_area_mm2`, `*_area_mm2`, `*_density_area`, and geodesic distance conversions may be skipped when the geometry backend is unavailable or incomplete.
+:::
 
-### General
+### Landmark metrics
 
-| Metric Key | Description |
+These are image-level metrics that do not depend on the selected ROI combination.
+
+| Metric key | Description |
 | :--- | :--- |
-| `laterality` | Image eye laterality (left/right) |
+| `laterality` | Eye laterality inferred from the disc-fovea relationship. |
+| `disc_center_x`, `disc_center_y` | Optic-disc center coordinates in image space. |
+| `disc_area_px` | Optic-disc area in pixels. |
+| `disc_area_mm2` | Optic-disc area in square millimetres when geometry area support is available. |
+| `disc_diameter_px`, `disc_diameter_um` | Equivalent optic-disc diameter in pixels and micrometres. |
+| `disc_major_axis_px`, `disc_major_axis_um` | Major axis of the fitted optic-disc ellipse in pixels and micrometres. |
+| `disc_minor_axis_px`, `disc_minor_axis_um` | Minor axis of the fitted optic-disc ellipse in pixels and micrometres. |
+| `disc_orientation_deg` | Orientation of the fitted optic-disc ellipse in degrees. |
+| `disc_circularity` | Circularity estimate for the optic-disc region. |
+| `disc_eccentricity` | Eccentricity of the fitted optic-disc ellipse. |
+| `fovea_center_x`, `fovea_center_y` | Fovea coordinates saved for the current image. |
+| `disc_fovea_distance_px`, `disc_fovea_distance_um` | Disc-to-fovea distance in pixels and micrometres. |
+| `disc_fovea_angle_deg` | Angle between the disc and fovea reference line. |
 
-### Optic Disc
+### ROI definitions
 
-| Metric Key | Description |
+ROI-dependent metrics are currently organized around these definitions:
+
+| ROI code | Display name | Purpose |
+| :--- | :--- | :--- |
+| `full` | Full image | Whole-image vessel summary. |
+| `central` | Central retina | Central retinal measurements around the optic-disc landmark. |
+| `mid_periphery` | Mid-periphery | Template-based mid-peripheral measurements. |
+
+### ROI metric key patterns
+
+For ROI-dependent metrics, the calculators use three prefixes:
+
+- `vessel_` for all vessels combined
+- `a_` for arteries only
+- `v_` for veins only
+
+The current key families are:
+
+| Metric pattern | Description |
 | :--- | :--- |
-| `disc_center_x` | X coordinate of optic disc center |
-| `disc_center_y` | Y coordinate of optic disc center |
-| `disc_diameter_px` | Diameter of equivalent optic disc circle (circle with same area as optic disc) in pixels |
-| `disc_diameter_um` | Diameter of equivalent optic disc circle (circle with same area as optic disc) in micrometers |
-| `disc_area_px` | Area of optic disc in pixels |
-| `disc_area_um` | Area of optic disc in micrometers |
-| `disc_major_axis_px` | Length of the major axis of the fitted ellipse in pixels |
-| `disc_major_axis_um` | Length of the major axis of the fitted ellipse in micrometers |
-| `disc_minor_axis_px` | Length of the minor axis of the fitted ellipse in pixels |
-| `disc_minor_axis_um` | Length of the minor axis of the fitted ellipse in micrometers |
-| `disc_orientation_deg` | Angle between the disc-centroid -- fovea line and the major axis of the fitted ellipse in degrees |
-| `disc_circularity` | Roundness of optic disc [0, 1] |
-| `disc_eccentricity` | Eccentricity of the ellipse that has the same second-moments as the region. The eccentricity is the ratio of the focal distance (distance between focal points) over the major axis length [0, 1) |
+| `*_density` | Vessel-pixel fraction inside the active ROI. |
+| `*_fractal_dimension_sandbox` | Fractal dimension estimated with the sandbox method. |
+| `*_fractal_dimension_boxcount` | Fractal dimension estimated with box counting. |
+| `*_area_mm2` | Vessel area in square millimetres when geometry area support is available. |
+| `*_density_area` | Vessel area divided by ROI area when both geometry areas are available. |
+| `*_tortuosity_density` | Mean density-style tortuosity measure across extracted vessel paths. |
+| `*_tortuosity_distance` | Mean chord-versus-curve tortuosity measure across extracted vessel paths. |
+| `*_width_px` | Mean vessel width in pixels. |
+| `*_width_um` | Mean vessel width in micrometres. |
+| `*_width_gradient_px` | Linear width gradient in image space. |
+| `*_width_gradient_um` | Linear width gradient in real-space micrometres. |
+| `*_width_intercept_px` | Linear width-fit intercept in pixels. |
+| `*_width_intercept_um` | Linear width-fit intercept in micrometres. |
 
-### Fovea
+### Relationship metrics
 
-| Metric Key | Description |
+| Metric key | Description |
 | :--- | :--- |
-| `fovea_center_x` | X coordinate of fovea center |
-| `fovea_center_y` | Y coordinate of fovea center |
+| `av_ratio` | Ratio of artery density to vein density when both are available. |
+| `av_crossings` | Number of artery-vein crossings estimated from overlapping skeleton pixels. |
+| `av_arcade_concavity` | Central-ROI arcade concavity estimate when the necessary landmarks and vessel data are available. |
 
-### Optic Disc - Fovea Relationship
+### Notes on exported workbooks
 
-| Metric Key | Description |
-| :--- | :--- |
-| `disc_fovea_distance_px` | Distance between optic disc and fovea centers in pixels |
-| `disc_fovea_distance_um` | Distance between optic disc and fovea centers in micrometers |
-| `disc_fovea_angle_deg` | Angle between horizontal axis and line connecting optic disc and fovea centers in degrees |
-
-### Vessels (Arteries + Veins)
-
-| Metric Key | Description |
-| :--- | :--- |
-| `vessel_density` | Ratio of vessel pixels to total image pixels |
-| `vessel_density_area` | Ratio of vessel area in square millimeters to ROI area in square millimeters |
-| `vessel_tortuosity_density` | Measure of how twisted the vessels are |
-| `vessel_tortuosity_fft` | Frequency domain measure of vessel tortuosity |
-| `vessel_fractal_dimension_sandbox` | Fractal dimension of vessels using sandbox method |
-| `vessel_fractal_dimension_boxcount` | Fractal dimension of vessels using box-counting method |
-| `vessel_width_px` | Average vessel width in pixels |
-| `vessel_width_um` | Average vessel width in micrometers |
-| `vessel_width_gradient_px` | Gradient (unitless) of vessel width along the vessel length in image space (pixels) |
-| `vessel_width_gradient_um` | Gradient (um/mm) of vessel width along the vessel length in real space (micrometers) |
-| `vessel_width_intercept_px` | Y-intercept of vessel width linear fit. Theoretically, vessel width at distance 0 from OD center in pixels |
-| `vessel_width_intercept_um` | Y-intercept of vessel width linear fit. Theoretically, vessel width at distance 0 from OD center in micrometers |
-
-### Arteries
-
-| Metric Key | Description |
-| :--- | :--- |
-| `crae` | Central Retinal Artery Equivalent |
-| `a_density` | Ratio of artery pixels to total image pixels |
-| `a_density_area` | Ratio of artery area in square millimeters to ROI area in square millimeters |
-| `a_tortuosity_density` | Measure of how twisted the arteries are |
-| `a_tortuosity_fft` | Frequency domain measure of artery tortuosity |
-| `a_fractal_dimension_sandbox` | Fractal dimension of arteries using sandbox method |
-| `a_fractal_dimension_boxcount` | Fractal dimension of arteries using box-counting method |
-| `a_width_px` | Average artery width in pixels |
-| `a_width_um` | Average artery width in micrometers |
-| `a_width_gradient_px` | Gradient (unitless) of artery width along the artery length in image space (pixels) |
-| `a_width_gradient_um` | Gradient (um/mm) of artery width along the artery length in real space (micrometers) |
-| `a_width_intercept_px` | Y-intercept of artery width linear fit. Theoretically, artery width at distance 0 from OD center in pixels |
-| `a_width_intercept_um` | Y-intercept of artery width linear fit. Theoretically, artery width at distance 0 from OD center in micrometers |
-| `a_groups` | Number of independent artery groups |
-| `a_branching_points` | Average number of artery branching points per independent artery group |
-| `a_branches` | Average number of artery branches per independent artery group |
-
-### Veins
-
-| Metric Key | Description |
-| :--- | :--- |
-| `crve` | Central Retinal Vein Equivalent |
-| `v_density` | Ratio of vein pixels to total image pixels |
-| `v_density_area` | Ratio of vein area in square millimeters to ROI area in square millimeters |
-| `v_tortuosity_density` | Measure of how twisted the veins are |
-| `v_tortuosity_fft` | Frequency domain measure of vein tortuosity |
-| `v_fractal_dimension_sandbox` | Fractal dimension of veins using sandbox method |
-| `v_fractal_dimension_boxcount` | Fractal dimension of veins using box-counting method |
-| `v_width_px` | Average vein width in pixels |
-| `v_width_um` | Average vein width in micrometers |
-| `v_width_gradient_px` | Gradient (unitless) of vein width along the vein length in image space (pixels) |
-| `v_width_gradient_um` | Gradient (um/mm) of vein width along the vein length in real space (micrometers) |
-| `v_width_intercept_px` | Y-intercept of vein width linear fit. Theoretically, vein width at distance 0 from OD center in pixels |
-| `v_width_intercept_um` | Y-intercept of vein width linear fit. Theoretically, vein width at distance 0 from OD center in micrometers |
-| `v_groups` | Number of independent vein groups |
-| `v_branching_points` | Average number of vein branching points per independent vein group |
-| `v_branches` | Average number of vein branches per independent vein group |
-
-### Arteries - Veins Relationship
-
-| Metric Key | Description |
-| :--- | :--- |
-| `av_ratio` | Ratio of artery pixels to vein pixels |
-| `av_crossings` | Number of vessel artery-vein crossings |
-| `av_arcade_concavity` | Concavity of the main vessel arcades |
+- Landmark metrics are saved once per image.
+- ROI metrics are saved per ROI selection.
+- Some database columns may remain empty when the corresponding landmarks or geometry operations are unavailable for a given image.

@@ -1,112 +1,107 @@
-# Installation
+# Installation and Setup
 
-## System Requirements
+This guide documents the setup path for Ultralyzer.
 
-Ultralyzer is compatible with Linux, Windows, and MacOS systems that support Python 3.12 (tested) or higher. The software leverages hardware acceleration for image processing and GUI rendering, so a system with a dedicated GPU is recommended for optimal performance, although not strictly necessary.
+## System requirements
 
-We recommend using a virtual environment (e.g., Conda) to manage dependencies and avoid conflicts with other Python packages on your system. You can start by installing [Anaconda](https://www.anaconda.com/docs/getting-started/anaconda/install) or [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install).
+- Python 3.12 or newer
+- Windows, macOS, or Linux
+- A virtual environment, such as [Miniconda](https://www.anaconda.com/download/success?reg=skipped), is strongly recommended
+- MATLAB available for geometry-dependent distance and area measurements
 
-## Geometry Backend Configuration
+Ultralyzer can still open without complete geometry support. When that happens, segmentation, review, editing, and export workflows remain available, but some geometry-dependent metrics may be skipped.
 
-Ultralyzer uses a geometry adapter for geodesic-distance and spherical-area metrics.
+:::{important}
 
-- This build is configured for the MATLAB geometry backend.
-- Start the application with `ULTRALYZER_GEOMETRY_BACKENDS=matlab`.
-- If the selected geometry backend is unavailable or incomplete, the application still opens and non-geometry workflows continue to work, but some geometry-dependent metrics are skipped.
+- Spherical geometry measurements are supported by a [MATLAB p-file](https://uk.mathworks.com/help/matlab/matlab_prog/building-a-content-obscured-format-with-p-code.html) called `distanceOnSP.p`. Make sure to place this file in `/Ultralyzer/src/ultralyzer/.bin/` after installation to enable geometry-dependent metrics.
+- `distanceOnSP.p` is kindly provided by [Optos PLC](https://www.optos.com/contact-us/). If you do not have access to this file, refer to the Optos contact page for assistance.
+:::
 
-## Installation Steps
+## Quick start
 
-<details>
+::::{tab-set}
 
-<summary>Windows</summary>
+:::{tab-item} Windows
 
-1. **Clone the Repository**:
-
-   Open Anaconda Prompt and run:
+1. Clone the repository.
 
    ```bash
    git clone https://github.com/Borja21091/Ultralyzer-matlab.git
    cd Ultralyzer-matlab
    ```
 
-2. **Set Up a Virtual Environment** (optional but recommended):
+2. Create and activate an environment.
 
    ```bash
    conda create -n ultralyzer_env python=3.12
    conda activate ultralyzer_env
    ```
 
-3. **Install Dependencies**:
-
-   Run the following command from the command line:
+3. Install dependencies.
 
    ```bash
    install.bat
    ```
 
-4. **Select the Geometry Backend**:
-
-   Set the MATLAB geometry backend:
+4. Select MATLAB as the backend.
 
    ```bash
    set ULTRALYZER_GEOMETRY_BACKENDS=matlab
    ```
 
-5. **Run the Application**:
+5. Run the GUI.
 
    ```bash
    python src/ultralyzer/main.py
    ```
 
-   If MATLAB geometry is not available, Ultralyzer still starts, but some metrics may be skipped.
+:::
 
-</details>
+:::{tab-item} macOS and Linux
 
-<br>
-
-<details>
-
-<summary>Linux & MacOS</summary>
-
-1. **Clone the Repository**:
-
-   Open a terminal and run:
+1. Clone the repository.
 
    ```bash
    git clone https://github.com/Borja21091/Ultralyzer-matlab.git
    cd Ultralyzer-matlab
    ```
 
-2. **Set Up a Virtual Environment** (optional but recommended):
+2. Create and activate an environment.
 
    ```bash
    conda create -n ultralyzer_env python=3.12
    conda activate ultralyzer_env
    ```
 
-3. **Install Dependencies**:
+3. Install dependencies.
 
-   Run the following command in the terminal:
+   ```bash
+   chmod +x install.sh
+   bash install.sh
+   ```
 
-    ```bash
-    chmod +x install.sh
-    bash install.sh
-    ```
-
-4. **Select the Geometry Backend**:
-
-   Set the MATLAB geometry backend:
+4. Select MATLAB as the backend.
 
    ```bash
    export ULTRALYZER_GEOMETRY_BACKENDS=matlab
    ```
 
-5. **Run the Application**:
+5. Run the GUI.
 
    ```bash
    python src/ultralyzer/main.py
    ```
 
-   If MATLAB geometry is not available, Ultralyzer still starts, but some metrics may be skipped.
+:::
 
-</details>
+::::
+
+## Geometry readiness and skipped metrics
+
+Ultralyzer checks geometry readiness from the GUI and summarizes it with a traffic-light indicator in the **Current image** card:
+
+- `Green`: geometry-dependent metrics are fully available.
+- `Yellow`: only part of the geometry workflow is available, so some metrics may be skipped.
+- `Red`: geometry-dependent metrics are unavailable and will be skipped.
+
+This status does not stop the rest of the application from loading. You can still review images, segment structures, edit masks, and export results.
