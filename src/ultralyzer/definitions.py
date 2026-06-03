@@ -139,7 +139,6 @@ METRIC_DICTIONARY = {
     "vessel_width_intercept_px" : "Y-intercept of vessel width linear fit. Theoretically, vessel width at distance 0 from OD center in pixels",
     "vessel_width_intercept_um" : "Y-intercept of vessel width linear fit. Theoretically, vessel width at distance 0 from OD center in micrometers",
     # ARTERIES
-    "crae" : "Central Retinal Artery Equivalent",
     "a_density" : "Ratio of artery pixels to total image pixels",
     "a_density_area" : "Ratio of artery area in square millimeters to ROI area in square millimeters",
     "a_tortuosity_density" : "Measure of how twisted the arteries are",
@@ -157,7 +156,6 @@ METRIC_DICTIONARY = {
     "a_branching_points" : "Average number of artery branching points per independent artery group",
     "a_branches" : "Average number of artery branches per independent artery group",
     # VEINS
-    "crve" : "Central Retinal Vein Equivalent",
     "v_density" : "Ratio of vein pixels to total image pixels",
     "v_density_area" : "Ratio of vein area in square millimeters to ROI area in square millimeters",
     "v_tortuosity_density" : "Measure of how twisted the veins are",
@@ -175,7 +173,10 @@ METRIC_DICTIONARY = {
     "v_branching_points" : "Average number of vein branching points per independent vein group",
     "v_branches" : "Average number of vein branches per independent vein group",
     # ARTERIES - VEINS RELATIONSHIP
-    "av_ratio" : "Ratio of artery pixels to vein pixels",
+    "crae_*" : "Central Retinal Artery Equivalent",
+    "crve_*" : "Central Retinal Vein Equivalent",
+    "avr_*" : "CRAE-to-CRVE ratio",
+    "av_ratio_*" : "Ratio of artery area to vein area",
     "av_crossings" : "Number of vessel artery-vein crossings",
     "av_arcade_concavity" : "Concavity of the main vessel arcades",
 }

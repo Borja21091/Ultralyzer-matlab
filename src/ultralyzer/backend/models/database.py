@@ -36,7 +36,13 @@ DEFAULT_ROI_DEFINITIONS = (
     },
 )
 
-LANDMARK_CONTROL_COLUMNS = {"image_id", "name", "algorithm_version", "timestamp"}
+LANDMARK_CONTROL_COLUMNS = {"image_id", "name", "algorithm_version", "timestamp", 
+                            "crae_px", "crve_px", "avr_px", "crae_um", "crve_um", "avr_um"}
+AV_LANDMARK_CONTROL_COLUMNS = {"image_id", "name", "algorithm_version", "timestamp", 
+                               "laterality", "disc_center_x", "disc_center_y", "disc_diameter_px", "disc_diameter_um",
+                               "disc_area_px", "disc_area_mm2", "disc_major_axis_px", "disc_major_axis_um", "disc_minor_axis_px", "disc_minor_axis_um", 
+                               "disc_orientation_deg", "disc_circularity", "disc_eccentricity", "fovea_center_x", "fovea_center_y", 
+                               "disc_fovea_distance_px", "disc_fovea_distance_um", "disc_fovea_angle_deg"}
 ROI_CONTROL_COLUMNS = {"id", "image_roi_id", "image_id", "algorithm_version", "timestamp"}
 
 class QCDecisionEnum(str, enum.Enum):
@@ -124,6 +130,13 @@ class LandmarkMetricsMixin:
     disc_fovea_distance_px = Column(Float, nullable=True)
     disc_fovea_distance_um = Column(Float, nullable=True)
     disc_fovea_angle_deg = Column(Float, nullable=True)
+    # ARTEY - VEIN LANDMARKS
+    crae_px = Column(Float, nullable=True)
+    crae_um = Column(Float, nullable=True)
+    crve_px = Column(Float, nullable=True)
+    crve_um = Column(Float, nullable=True)
+    avr_px = Column(Float, nullable=True)
+    avr_um = Column(Float, nullable=True)
 
 
 class ROIMetricsMixin:
@@ -144,7 +157,6 @@ class ROIMetricsMixin:
     vessel_width_intercept_px = Column(Float, nullable=True)
     vessel_width_intercept_um = Column(Float, nullable=True)
     # ARTERIES
-    crae = Column(Float, nullable=True)
     a_density = Column(Float, nullable=True)
     a_density_area = Column(Float, nullable=True)
     a_tortuosity_density = Column(Float, nullable=True)
@@ -162,7 +174,6 @@ class ROIMetricsMixin:
     a_branching_points = Column(Float, nullable=True)
     a_branches = Column(Float, nullable=True)
     # VEINS
-    crve = Column(Float, nullable=True)
     v_density = Column(Float, nullable=True)
     v_density_area = Column(Float, nullable=True)
     v_tortuosity_density = Column(Float, nullable=True)
@@ -180,7 +191,8 @@ class ROIMetricsMixin:
     v_branching_points = Column(Float, nullable=True)
     v_branches = Column(Float, nullable=True)
     # ARTERIES - VEINS RELATIONSHIP
-    av_ratio = Column(Float, nullable=True)
+    av_ratio_px = Column(Float, nullable=True)
+    av_ratio_um = Column(Float, nullable=True)
     av_crossings = Column(Float, nullable=True)
     av_arcade_concavity = Column(Float, nullable=True)
 
@@ -267,6 +279,7 @@ class ROIMetricsResult(ROIMetricsMixin, Base):
 
     def __repr__(self):
         return f"<ROIMetricsResult(image_id={self.image_id}, image_roi_id={self.image_roi_id})>"
+
 
 class DatabaseManager:
     """Manages database connection and operations"""
@@ -839,6 +852,50 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def save_av_landmark_metrics_by_id(
+        self,
+        image_id: int,
+        metrics: dict,
+        algorithm_version: str = "1.0") -> bool:
+        """Save or update CRAE/CRVE/AVR landmark metrics."""
+        metric_values = self._metric_values_for_model(
+            LandmarkMetricsResult,
+            metrics,
+            AV_LANDMARK_CONTROL_COLUMNS
+        )
+        if not metric_values:
+            return True
+
+        session = self.session
+        try:
+            meta = session.query(MetaData).filter_by(id=image_id).first()
+            if not meta:
+                print(f"Error: No metadata found for ID {image_id}")
+                return False
+
+            existing = session.query(LandmarkMetricsResult).filter_by(image_id=image_id).first()
+            if existing:
+                for key, value in metric_values.items():
+                    setattr(existing, key, value)
+                existing.algorithm_version = algorithm_version
+                existing.timestamp = dt.datetime.now(dt.timezone.utc)
+            else:
+                session.add(LandmarkMetricsResult(
+                    image_id=image_id,
+                    name=meta.name,
+                    algorithm_version=algorithm_version,
+                    **metric_values,
+                ))
+
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            print(f"Error saving landmark metrics: {str(e)}")
+            return False
+        finally:
+            session.close()
+    
     def save_roi_metrics(
         self,
         image_roi_id: int,
@@ -1059,7 +1116,7 @@ class DatabaseManager:
 
         metric_columns = [
             column.name for column in LandmarkMetricsResult.__table__.columns
-            if column.name not in LANDMARK_CONTROL_COLUMNS
+            if column.name not in set(LANDMARK_CONTROL_COLUMNS).intersection(AV_LANDMARK_CONTROL_COLUMNS)
         ]
         base_columns = ["filename"]
         data = []

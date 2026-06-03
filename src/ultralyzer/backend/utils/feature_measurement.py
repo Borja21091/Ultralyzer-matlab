@@ -164,7 +164,7 @@ def generate_vessel_skeleton(vessels, od_mask, od_centre, min_length=10) -> list
     filt = morphology.disk(3)
     v_small = cv2.morphologyEx(vessels.astype(np.uint8), cv2.MORPH_CLOSE, filt)
     
-    # Skeletonize using OpenCV
+    # Skeletonize
     v_skel_all = morphology.skeletonize(v_small)
     
     # Remove branching points

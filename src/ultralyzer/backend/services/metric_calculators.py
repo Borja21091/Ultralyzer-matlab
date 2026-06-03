@@ -158,6 +158,103 @@ class LandmarkMetricsCalculator:
         return disc_um_metrics
 
 
+class AVMetricsCalculator:
+    """Computes artery & vein metrics that are independent of ROI selection."""
+
+    def __init__(self, logger: logging.Logger | None = None):
+        self.logger = logger or logging.getLogger(self.__class__.__name__)
+
+    def compute(
+        self, 
+        bundle: SegmentationBundle, 
+        landmarks: LandmarkContext) -> dict[str, Any]:
+        metrics: dict[str, Any] = {}
+        
+        disc_center_x = landmarks.disc_center_x
+        disc_center_y = landmarks.disc_center_y
+        disc_diameter_px = landmarks.disc_diameter_px
+
+        artery_mask = bundle.a_mask.astype(bool)
+        vein_mask = bundle.v_mask.astype(bool)
+        
+        if not artery_mask.any() or not vein_mask.any():
+            self.logger.warning(f"No vessels (arteries or veins) detected in {bundle.name}. Skipping vessel metrics.")
+            return metrics
+
+        if disc_center_x is None or disc_center_y is None or disc_diameter_px is None:
+            self.logger.warning(f"Optic disc metrics missing for {bundle.name}. Skipping CRAE/CRVE metrics.")
+            return metrics
+        
+        # CRAE and CRVE ring mask
+        yy, xx = np.ogrid[:bundle.shape[0], :bundle.shape[1]]
+        dist_sq = (yy - disc_center_y)**2 + (xx - disc_center_x)**2
+        ring_mask = (dist_sq >= disc_diameter_px**2) & (dist_sq <= (1.5 * disc_diameter_px)**2)
+        
+        artery_mask *= ring_mask
+        vein_mask *= ring_mask
+        zonal_vessels = [artery_mask, vein_mask]
+        
+        # CRAE and CRVE
+        for vtype, mask in zip(["artery", "vein"], zonal_vessels):
+            if not mask.any():
+                self.logger.warning(f"No {vtype}s detected in CRAE/CRVE ring for {bundle.name}. Skipping {vtype} caliber metrics.")
+                continue
+            
+            vcoords = generate_vessel_skeleton(mask.astype(np.uint8), bundle.od_mask, (disc_center_y, disc_center_x))
+            edges1, edges2, _ = compute_edges(mask.astype(np.uint8), vcoords)
+            _, avg_vessel_widths_px = calculate_vessel_widths_px(edges1, edges2)
+            _, avg_vessel_widths_mm = calculate_vessel_widths_mm(edges1, edges2)
+            
+            N_vessels = len(avg_vessel_widths_mm)
+            
+            if N_vessels < 6:
+                self.logger.warning(f"Only {N_vessels} {vtype}s detected in CRAE/CRVE ring for {bundle.name}. Expected 6 for Knudtson caliber calculation.")
+                continue
+            else:
+                caliber_px = self._caliber_algorithm(avg_vessel_widths_px, vtype)
+                caliber_mm = self._caliber_algorithm(avg_vessel_widths_mm, vtype)
+            
+            metrics[f"cr{vtype[0]}e_px"] = float(caliber_px)
+            metrics[f"cr{vtype[0]}e_um"] = float(caliber_mm) * 1e3  # Convert mm to microns
+        
+        # AVR
+        if "crae_px" in metrics and "crve_px" in metrics and metrics["crve_px"] != 0:
+            metrics["avr_px"] = float(metrics["crae_px"] / metrics["crve_px"])
+        if "crae_um" in metrics and "crve_um" in metrics and metrics["crve_um"] != 0:
+            metrics["avr_um"] = float(metrics["crae_um"] / metrics["crve_um"])
+        
+        return metrics
+    
+    def _caliber_algorithm(
+        self, 
+        widths: list[float], 
+        vtype: str
+        ) -> float:
+        
+        while len(widths) > 1:
+            # Sort from biggest to lowest and pick the first 6
+            widths = sorted(widths, reverse=True)[:6]
+            
+            caliber = []
+            for i in range(len(widths) // 2):
+                w1 = widths[i]
+                w2 = widths[-(i + 1)]
+                caliber.append(self._knudtson_caliber(w1, w2, vtype))
+            if len(widths) % 2 == 1:
+                caliber.append(widths[len(widths) // 2])  # Add the middle one if odd
+            widths = caliber
+            
+        return float(widths[0]) if widths else float("nan")
+    
+    def _knudtson_caliber(self, w1: float, w2: float, vtype: str) -> float:
+        if vtype.lower() not in ["artery", "vein"]:
+            self.logger.warning(f"Unknown vessel type '{vtype}' for Knudtson caliber calculation. Returning NaN.")
+            return float("nan")
+        
+        k = 0.88 if vtype.lower() == "artery" else 0.95
+        return k * (w1**2 + w2**2)**0.5
+
+
 class ROIMetricsCalculator:
     """Computes vessel metrics for one concrete ROI mask."""
 
@@ -212,8 +309,11 @@ class ROIMetricsCalculator:
                 metrics.update(self._compute_skeleton_metrics(bundle, vessel_mask, prefix, od_center, roi.roi_code))
 
         if "a_density" in metrics and "v_density" in metrics:
-            metrics["av_ratio"] = metrics["a_density"] / metrics["v_density"] if metrics["v_density"] > 0 else float("nan")
+            metrics["av_ratio_px"] = metrics["a_density"] / metrics["v_density"] if metrics["v_density"] > 0 else float("nan")
 
+        if "a_area_mm2" in metrics and "v_area_mm2" in metrics:
+            metrics["av_ratio_um"] = metrics["a_area_mm2"] / metrics["v_area_mm2"] if metrics["v_area_mm2"] > 0 else float("nan")
+        
         if masks[1].any() and masks[2].any():
             artery_skeleton = skeletonize(masks[1])
             vein_skeleton = skeletonize(masks[2])

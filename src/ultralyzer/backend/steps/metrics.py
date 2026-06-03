@@ -5,7 +5,7 @@ import logging
 
 from backend.models.database import DatabaseManager
 from backend.services.geometry_adapter import GeometryReadiness, get_default_geometry_adapter
-from backend.services.metric_calculators import LandmarkMetricsCalculator, ROIMetricsCalculator
+from backend.services.metric_calculators import LandmarkMetricsCalculator, ROIMetricsCalculator, AVMetricsCalculator
 from backend.services.roi_masks import LandmarkContext, ROIMaskService, SegmentationBundle
 from backend.steps.base_step import ProcessingStep
 
@@ -23,6 +23,7 @@ class MetricsStep(ProcessingStep):
         self.geometry_adapter = get_default_geometry_adapter()
         self.roi_mask_service = ROIMaskService(self.db_manager)
         self.landmark_calculator = LandmarkMetricsCalculator(self.logger)
+        self.av_landmark_calculator = AVMetricsCalculator(self.logger)
         self.roi_calculator = ROIMetricsCalculator(self.logger)
 
         self.a_mask = None
@@ -62,6 +63,12 @@ class MetricsStep(ProcessingStep):
                 return {"success": False, "error": "Failed to save landmark metrics"}
 
             landmark_context = self.landmark_calculator.to_context(landmark_metrics)
+            av_landmark_metrics = self.av_landmark_calculator.compute(
+                bundle,
+                landmark_context)
+            if not self.db_manager.save_av_landmark_metrics_by_id(bundle.image_id, av_landmark_metrics):
+                self._emit_status(status_callback, f"Metrics error for {Path(image_path).name}: Failed to save AV landmark metrics")
+                return {"success": False, "error": "Failed to save AV landmark metrics"}
             roi_result = self._process_selected_rois(
                 bundle,
                 landmark_context,
@@ -81,6 +88,7 @@ class MetricsStep(ProcessingStep):
                 "roi_errors": roi_result["errors"],
                 "metrics": {
                     **landmark_metrics,
+                    **av_landmark_metrics,
                     "roi_metrics": roi_result["metrics"],
                     "roi_skipped": roi_result["skipped"],
                 },
