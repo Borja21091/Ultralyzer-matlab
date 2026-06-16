@@ -2,6 +2,14 @@ import os
 import subprocess
 import sys
 
+try:
+    from matlabengine_setup import install_detected_matlabengine
+except ImportError:
+    REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    if REPO_ROOT not in sys.path:
+        sys.path.insert(0, REPO_ROOT)
+    from matlabengine_setup import install_detected_matlabengine
+
 
 def install_requirements() -> None:
     req_file = "requirements.txt"
@@ -19,6 +27,7 @@ def install_requirements() -> None:
 
 def main() -> None:
     install_requirements()
+    install_detected_matlabengine()
     print("Setup completed successfully!")
     print("Set ULTRALYZER_GEOMETRY_BACKENDS=matlab before launching Ultralyzer.")
     print("If the MATLAB geometry backend is unavailable, the app still runs but some metrics may be skipped.")

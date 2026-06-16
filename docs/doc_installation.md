@@ -11,6 +11,10 @@ This guide documents the setup path for Ultralyzer.
 
 Ultralyzer can still open without complete geometry support. When that happens, segmentation, review, editing, and export workflows remain available, but some geometry-dependent metrics may be skipped.
 
+The install scripts detect the installed MATLAB release and install the matching `matlabengine` package automatically. If MATLAB is installed in a non-standard location, set `ULTRALYZER_MATLABROOT` to the MATLAB root before running the installer.
+
+If the installer reports that your current Python version is incompatible with the detected MATLAB release, recreate the environment with a Python version supported by that MATLAB release before enabling the MATLAB backend.
+
 :::{important}
 
 - Spherical geometry measurements are supported by a [MATLAB p-file](https://uk.mathworks.com/help/matlab/matlab_prog/building-a-content-obscured-format-with-p-code.html) called `distanceOnSP.p`. Make sure to place this file in `/Ultralyzer/src/ultralyzer/.bin/` after installation to enable geometry-dependent metrics.
@@ -44,6 +48,8 @@ Start by opening `Anaconda Prompt`. Then run the following commands:
    ```bash
    install.bat
    ```
+
+   This installs the general Python dependencies first and then installs the `matlabengine` version that matches the detected MATLAB release.
 
 4. Select MATLAB as the backend.
 
@@ -83,6 +89,8 @@ Start by opening a terminal and run the following commands:
    chmod +x install.sh
    bash install.sh
    ```
+
+   This installs the general Python dependencies first and then installs the `matlabengine` version that matches the detected MATLAB release.
 
 4. Select MATLAB as the backend.
 

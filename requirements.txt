@@ -11,7 +11,6 @@ SQLAlchemy
 matplotlib
 bottleneck
 torchvision
-matlabengine
 scikit-image
 photoshopapi
 scikit-learn
