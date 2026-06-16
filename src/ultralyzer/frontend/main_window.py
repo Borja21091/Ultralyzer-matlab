@@ -1,15 +1,17 @@
 import cv2
 import numpy as np
+from math import ceil
 from pathlib import Path
 from definitions import IMAGE_FORMATS, METRIC_DICTIONARY, SEG_DIR, IM_DIR
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QFileDialog, QMessageBox, QComboBox, QTextEdit, 
+    QLabel, QFileDialog, QMessageBox, QComboBox,
     QProgressDialog, QApplication, QCompleter, QToolButton,
-    QMenu, QWidgetAction, QSlider, QStyle
+    QMenu, QWidgetAction, QSlider, QStyle, QDialog,
+    QTableWidget, QTableWidgetItem, QHeaderView
 )
-from PySide6.QtCore import Qt, QSize, QRectF
-from PySide6.QtGui import QAction, QPainter, QPen, QIcon, QPixmap, QPalette
+from PySide6.QtCore import Qt, QSize, QRectF, QTimer
+from PySide6.QtGui import QAction, QPainter, QPen, QIcon, QPixmap, QPalette, QTextDocument
 from frontend.widgets.widget_s2 import SegmentationWidget
 from backend.models.database import DatabaseManager
 
@@ -521,17 +523,64 @@ class MainWindow(QMainWindow):
     
     def _on_metric_definitions(self):
         """Show metric definitions dialog"""
-        dialog = QMessageBox(self)
+        dialog = QDialog(self)
         dialog.setWindowTitle("Metric Definitions")
-        dialog.setText("Metric Definitions")
-        
-        text_edit = QTextEdit()
-        text_edit.setReadOnly(True)
-        text_edit.setMarkdown(''.join(f"<p><b>{key}</b>: {value}</p>" for key, value in METRIC_DICTIONARY.items()))
-        text_edit.setMinimumWidth(800)
-        text_edit.setMinimumHeight(600)
-        
-        dialog.layout().addWidget(text_edit, 0, 1)
+        dialog.resize(900, 600)
+
+        layout = QVBoxLayout(dialog)
+
+        table = QTableWidget(len(METRIC_DICTIONARY), 2, dialog)
+        table.setHorizontalHeaderLabels(["Metric", "Definition"])
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        table.setWordWrap(True)
+        table.setTextElideMode(Qt.TextElideMode.ElideNone)
+        table.verticalHeader().setVisible(False)
+        table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        table.verticalHeader().setDefaultSectionSize(36)
+        table.horizontalHeader().setStretchLastSection(False)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+
+        font_metrics = table.fontMetrics()
+        line_height = font_metrics.lineSpacing()
+        row_padding = 12
+
+        def update_row_heights():
+            for row in range(table.rowCount()):
+                max_lines = 1
+                for column in range(table.columnCount()):
+                    item = table.item(row, column)
+                    if item is None:
+                        continue
+
+                    content_width = table.columnWidth(column) - 12
+                    if content_width <= 0:
+                        continue
+
+                    document = QTextDocument()
+                    document.setDefaultFont(table.font())
+                    document.setDocumentMargin(0)
+                    document.setPlainText(item.text())
+                    document.setTextWidth(content_width)
+                    wrapped_lines = max(1, ceil(document.size().height() / line_height))
+                    max_lines = max(max_lines, wrapped_lines)
+
+                table.setRowHeight(row, max_lines * line_height + row_padding)
+
+        for row, (key, value) in enumerate(METRIC_DICTIONARY.items()):
+            key_item = QTableWidgetItem(str(key))
+            value_item = QTableWidgetItem(str(value))
+            key_item.setFlags(key_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            value_item.setFlags(value_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            table.setItem(row, 0, key_item)
+            table.setItem(row, 1, value_item)
+
+        table.horizontalHeader().sectionResized.connect(lambda *_: update_row_heights())
+        QTimer.singleShot(0, update_row_heights)
+
+        layout.addWidget(table)
         dialog.exec()
     
     def _on_qc_decision(self, filename: str, decision: str):
