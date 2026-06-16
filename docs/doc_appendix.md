@@ -72,6 +72,9 @@ These are image-level metrics that do not depend on the selected ROI combination
 | `fovea_center_x`, `fovea_center_y` | Fovea coordinates saved for the current image. |
 | `disc_fovea_distance_px`, `disc_fovea_distance_um` | Disc-to-fovea distance in pixels and micrometres. |
 | `disc_fovea_angle_deg` | Angle between the disc and fovea reference line. |
+| `crae_**` | Central retinal artery equivalent (CRAE) estimate using the Knudtson formula in pixels and micrometres. |
+| `crve_**` | Central retinal vein equivalent (CRVE) estimate using the Knudtson formula in pixels and micrometres. |
+| `avr_**` | Artery-to-vein ratio (AVR) estimate using the Knudtson formula in pixels and micrometres. |
 
 ### ROI definitions
 
@@ -95,6 +98,7 @@ The current key families are:
 
 | Metric pattern | Description |
 | :--- | :--- |
+| `roi_area_**` | Area of the selected ROI in pixels and square millimitres. |
 | `*_density` | Vessel-pixel fraction inside the active ROI. |
 | `*_fractal_dimension_sandbox` | Fractal dimension estimated with the sandbox method. |
 | `*_fractal_dimension_boxcount` | Fractal dimension estimated with box counting. |
