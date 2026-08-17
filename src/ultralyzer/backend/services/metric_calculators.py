@@ -188,7 +188,7 @@ class AVMetricsCalculator:
         # CRAE and CRVE ring mask
         yy, xx = np.ogrid[:bundle.shape[0], :bundle.shape[1]]
         dist_sq = (yy - disc_center_y)**2 + (xx - disc_center_x)**2
-        ring_mask = (dist_sq >= disc_diameter_px**2) & (dist_sq <= (1.5 * disc_diameter_px)**2)
+        ring_mask = (dist_sq >= disc_diameter_px**2) & (dist_sq <= (1.5 * disc_diameter_px)**2) # Zone B annulus
         
         artery_mask *= ring_mask
         vein_mask *= ring_mask
@@ -208,7 +208,7 @@ class AVMetricsCalculator:
             N_vessels = len(avg_vessel_widths_mm)
             
             if N_vessels < 6:
-                self.logger.warning(f"Only {N_vessels} {vtype}s detected in CRAE/CRVE ring for {bundle.name}. Expected 6 for Knudtson caliber calculation.")
+                self.logger.warning(f"Only {N_vessels} {vtype}s detected in CRAE/CRVE ring for {bundle.name}. Expected at least 6 for Knudtson caliber calculation.")
                 continue
             else:
                 caliber_px = self._caliber_algorithm(avg_vessel_widths_px, vtype)
