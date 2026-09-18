@@ -1,4 +1,5 @@
 tqdm
+gdcm
 numpy
 numba
 torch
