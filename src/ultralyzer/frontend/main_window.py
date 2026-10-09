@@ -802,8 +802,36 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting results workbook: {str(e)}")
             
+    def _read_psd_export_inputs(self, img_name: str):
+        """
+        Read the RGB image and RGB segmentation mask needed for a PSD export.
+        Returns (image, mask, None) on success, or (None, None, reason) if the
+        image cannot be exported.
+        """
+        meta = self._db_manager.get_metadata_by_filename(img_name)
+        if not meta:
+            return None, None, "image is not in the database"
+        seg_meta = self._db_manager.get_segmentation_result_by_id(meta.id)
+        if not seg_meta:
+            return None, None, "no segmentation found"
+        img_path = Path(meta.folder) / Path(meta.name + meta.extension)
+        seg_path = Path(seg_meta.seg_folder) / Path(meta.name + seg_meta.extension)
+        if not img_path.exists() or not seg_path.exists():
+            return None, None, "image or segmentation file not found"
+
+        image = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+        mask = cv2.imread(str(seg_path), cv2.IMREAD_COLOR)
+        if image is None or mask is None:
+            return None, None, "image or segmentation file could not be read"
+        if mask.shape[:2] != image.shape[:2]:
+            return None, None, "segmentation size does not match the image"
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+        return image, mask, None
+
     def _on_export_to_psd_all(self):
-        """Export all segmentations to PSD"""
+        """Export all segmentations to PSD. Images without a usable segmentation are skipped."""
         import photoshopapi as psapi
 
         # Get image list from dropdown
@@ -814,6 +842,8 @@ class MainWindow(QMainWindow):
             return
         
         save_folder = QFileDialog.getExistingDirectory(self, "Select Folder to Save PSD Files")
+        if not save_folder:
+            return
         
         # Setup Progress Dialog
         progress = QProgressDialog("Initializing export...", "Cancel", 0, len(image_names), self)
@@ -822,6 +852,7 @@ class MainWindow(QMainWindow):
         progress.setValue(0)
         
         k = 0
+        skipped = []
         for i, img_name in enumerate(image_names):
             
             # Check if user clicked cancel
@@ -832,29 +863,15 @@ class MainWindow(QMainWindow):
             
             name = Path(img_name).stem
             
-            # Find mask in database
-            meta = self._db_manager.get_metadata_by_filename(img_name)
-            if not meta:
-                QMessageBox.warning(self, "Image Not in Database", f"The selected image is not in the database: {name}")
-                return
-            seg_meta = self._db_manager.get_segmentation_result_by_id(meta.id)
-            if not seg_meta:
-                QMessageBox.warning(self, "No Segmentation Found", f"No segmentation found for image: {name}")
-                return
-            img_path = Path(meta.folder) / Path(meta.name + meta.extension)
-            seg_path = Path(seg_meta.seg_folder) / Path(meta.name + seg_meta.extension)
-            
-            # Check if files exist
-            if not img_path.exists() or not seg_path.exists():
-                QMessageBox.warning(self, "Files Not Found", f"Image or segmentation file not found for: {name}")
+            # Read image & mask
+            image, mask, reason = self._read_psd_export_inputs(img_name)
+            if reason:
+                skipped.append(f"{name}: {reason}")
+                progress.setValue(i + 1)
+                QApplication.processEvents()
                 continue
             
-            # Read image & mask
-            image = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             green = cv2.cvtColor(image[:,:,1], cv2.COLOR_GRAY2RGB)
-            mask = cv2.imread(str(seg_path), cv2.IMREAD_COLOR)
-            mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
             w, h = image.shape[1], image.shape[0]
 
             arteries = np.zeros((h, w, 4), dtype=np.uint8)
@@ -894,17 +911,34 @@ class MainWindow(QMainWindow):
             QApplication.processEvents()
             
         progress.setValue(len(image_names))        
-        self.statusBar().showMessage(f"Exported {k} / {len(image_names)} PSD files to: {save_folder}")            
+        self.statusBar().showMessage(f"Exported {k} / {len(image_names)} PSD files to: {save_folder}")
+
+        if skipped:
+            shown = skipped[:20]
+            if len(skipped) > len(shown):
+                shown.append(f"... and {len(skipped) - len(shown)} more")
+            QMessageBox.warning(
+                self,
+                "Images Skipped",
+                f"{len(skipped)} image(s) were skipped and not exported:\n\n" + "\n".join(shown)
+            )
     
     def _on_export_to_psd_current(self):
         """Export current segmentation to PSD"""
         import photoshopapi as psapi
 
         img_name = self.image_dropdown.currentText()
-        name = Path(img_name).stem
         
         if not img_name:
             QMessageBox.warning(self, "No Image Selected", "Please select an image to export.")
+            return
+
+        name = Path(img_name).stem
+
+        # Validate before asking for a save location
+        image, mask, reason = self._read_psd_export_inputs(img_name)
+        if reason:
+            QMessageBox.warning(self, "Cannot Export PSD", f"Cannot export {name}: {reason}.")
             return
         
         save_path, _ = QFileDialog.getSaveFileName(
@@ -917,29 +951,7 @@ class MainWindow(QMainWindow):
         if not save_path:
             return
         
-        # Find mask in database
-        meta = self._db_manager.get_metadata_by_filename(name)
-        if not meta:
-            QMessageBox.warning(self, "Image Not in Database", f"The selected image is not in the database: {name}")
-            return
-        seg_meta = self._db_manager.get_segmentation_result_by_id(meta.id)
-        if not seg_meta:
-            QMessageBox.warning(self, "No Segmentation Found", f"No segmentation found for image: {name}")
-            return
-        img_path = Path(meta.folder) / Path(meta.name + meta.extension)
-        seg_path = Path(seg_meta.seg_folder) / Path(meta.name + seg_meta.extension)
-        
-        # Check if files exist
-        if not img_path.exists() or not seg_path.exists():
-            QMessageBox.warning(self, "Files Not Found", f"Image or segmentation file not found for: {name}")
-            return
-        
-        # Read image & mask
-        image = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         green = cv2.cvtColor(image[:,:,1], cv2.COLOR_GRAY2RGB)
-        mask = cv2.imread(str(seg_path), cv2.IMREAD_COLOR)
-        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
         w, h = image.shape[1], image.shape[0]
 
         arteries = np.zeros((h, w, 4), dtype=np.uint8)
